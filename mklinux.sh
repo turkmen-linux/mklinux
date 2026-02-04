@@ -38,6 +38,7 @@ nobuild=0
 pkgdir=""
 sysname="Linux"
 workdir="/tmp/mklinux/"
+install_tools=0
 builddir=""
 curdir="$PWD/"
 # Install variables
@@ -82,10 +83,13 @@ for arg in $@ ; do
         install_modules=1
     elif [[ "$arg" == "--install-vmlinuz" || "$arg" == "-x" ]] ; then
         install_vmlinuz=1
+    elif [[ "$arg" == "--install-tools" || "$arg" == "-u" ]] ; then
+        install_tools=1
     elif [[ "$arg" == "--install-all" || "$arg" == "-i" ]] ; then
         install_header=1
         install_modules=1
         install_vmlinuz=1
+        install_tools=1
     elif [[ "$arg" == "--no-build" || "$arg" == "-n" ]] ; then
         no_build=1
     elif [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then
@@ -127,6 +131,7 @@ if [[ "$yes" == "" ]] ; then
     echo -n "Confirm? [Y/n] "
     read -n 1 c
     if [[ "$c" != "y" && "$c" != "Y" ]] ; then
+        echo
         exit 1
     fi
 fi
@@ -195,13 +200,13 @@ if [[ "${no_build}" == "" ]] ; then
     grep "^CONFIG_MODULE_COMPRESS_[A-Z]*" .config  | cut -f1 -d"=" | while read cfg ; do
         ./scripts/config --disable $cfg
     done
-	  ./scripts/config --disable CONFIG_MODULE_COMPRESS
+	./scripts/config --disable CONFIG_MODULE_COMPRESS
 
-	  # set local version
-	  sed -i "s/^CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION=\"${LOCAL_VERSION}\"/g" .config
+	# set local version
+	sed -i "s/^CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION=\"${LOCAL_VERSION}\"/g" .config
 
-	  # enable gzip and uncompress modules
-	  ./scripts/config --enable CONFIG_MODULE_DECOMPRESS
+	# enable gzip and uncompress modules
+	./scripts/config --enable CONFIG_MODULE_DECOMPRESS
 
     # remove default hostname
     sed -i "s/^CONFIG_DEFAULT_HOSTNAME=.*/CONFIG_DEFAULT_HOSTNAME=\"localhost\"/g" .config
@@ -219,6 +224,10 @@ if [[ "${no_build}" == "" ]] ; then
     ./scripts/config --enable CONFIG_LOGO_LINUX_VGA16
     ./scripts/config --enable CONFIG_LOGO_LINUX_CLUT224
 
+    # schedutil governor
+    ./scripts/config --enable CONFIG_CPU_FREQ_GOV_SCHEDUTIL
+    ./scripts/config --enable CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
+
     # embed all filesystem modules
     grep "^CONFIG_[A-Z0-9]*_FS=m" .config  | cut -f1 -d"=" | while read cfg ; do
         ./scripts/config --enable $cfg
@@ -234,6 +243,9 @@ if [[ "${no_build}" == "" ]] ; then
         ./scripts/config --disable $cfg
     done
 
+    # disable debug
+    cat .config | grep -v "#" | grep "DEBUG" \
+        | sed "s/=.*//g" | sed "s|^|./scripts/config --disable |g" | sh
 
     yes "" | make -C "$builddir" config
 fi
@@ -273,6 +285,31 @@ if [[ "${no_build}" == "" ]] ; then
 		e="unshare -rufipnm"
 	fi
 	$e make all -j$(nproc)
+fi
+
+if [[ "${install_tools}" == "1" ]] ; then
+    echo ':: cpupower'
+    make -C tools/power/cpupower install DESTDIR="$pkgdir"
+    echo ':: x86_energy_perf_policy'
+    make -C tools/power/x86/x86_energy_perf_policy install DESTDIR="$pkgdir"
+    echo ':: usbip'
+    bash -c "cd tools/usb/usbip ; ./autogen.sh ; ./configure --prefix=/usr --sbindir=/sbin"
+    make -C tools/usb/usbip install DESTDIR="$pkgdir"
+    echo ':: tmon'
+    make -C tools/thermal/tmon install DESTDIR="$pkgdir"
+    echo ':: turbostat'
+    make -C tools/power/x86/turbostat install DESTDIR="$pkgdir"
+    echo ':: hv'
+    make -C tools/hv install DESTDIR="$pkgdir"
+    echo ':: bpf'
+    make -C tools/bpf/bpftool install DESTDIR="$pkgdir"
+    echo ':: bootconfig'
+    make -C tools/bootconfig install DESTDIR="$pkgdir"
+    echo ':: intel-speed-select'
+    make -C tools/power/x86/intel-speed-select install DESTDIR="$pkgdir"
+    echo ':: kcpuid'
+    make -C tools/arch/x86/kcpuid install DESTDIR="$pkgdir"
+
 fi
 
 if [[ "${install_vmlinuz}" == "1" ]] ; then
