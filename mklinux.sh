@@ -15,9 +15,10 @@ write_help(){
      echo " -h --help            : help message"
      echo " -y --yes             : disable questions"
      echo " -n --no-build        : do not build"
-     echo " -i --install-all     : install vmlinuz, header and module files"
+     echo " -i --install-all     : install vmlinuz, header and module files (-f -q -u -x)"
      echo " -f --install-headers : install header files"
      echo " -q --install-modules : install module files"
+     echo " -u --install-tools   : install tools"
      echo " -x --install-vmlinuz : install vmlinuz file"
      echo " -g --self-install    : install mklinux on system"
 }
@@ -311,7 +312,7 @@ if [[ "${install_tools}" == "1" ]] ; then
     echo ':: hv'
     make -C tools/hv install DESTDIR="$pkgdir"
     echo ':: bpf'
-    make -C tools/bpf/bpftool install DESTDIR="$pkgdir"
+    make -C tools/bpf/bpftool install prefix="/usr" DESTDIR="$pkgdir"
     echo ':: bootconfig'
     make -C tools/bootconfig install DESTDIR="$pkgdir"
     echo ':: intel-speed-select'
