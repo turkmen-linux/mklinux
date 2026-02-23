@@ -346,11 +346,8 @@ if [[ "${install_modules}" == "1" ]] ; then
 fi
 
 if [[ "${install_header}" == "1" ]] ; then
-	# install libc headers
-	mkdir -p "$pkgdir/usr/include/linux"
-    cp -v -t "$pkgdir/usr/include/" -a include/linux/
-    cp -v -t "$pkgdir/usr/" -a tools/include
-	make headers_install INSTALL_HDR_PATH="$pkgdir/usr"
+    # install headers
+    make headers_install INSTALL_HDR_PATH="$pkgdir/usr"
 fi
 
 if [[ "${install_modules}" == "1" ]] ; then
