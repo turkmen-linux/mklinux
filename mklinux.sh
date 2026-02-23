@@ -184,6 +184,7 @@ if [[ "${no_build}" == "" ]] ; then
 	fi
 
     yes "" | make -C "$builddir" config
+    yes "" | make -C "$builddir" hardening.config
 
 	  cd "$builddir"
 
@@ -227,6 +228,14 @@ if [[ "${no_build}" == "" ]] ; then
     # schedutil governor
     ./scripts/config --enable CONFIG_CPU_FREQ_GOV_SCHEDUTIL
     ./scripts/config --enable CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
+
+    # reduce size
+    ./scripts/config --enable TRIM_UNUSED_KSYMS
+    ./scripts/config --enable LTO_MENU
+    ./scripts/config --enable CONFIG_OPTIMIZE_INLINING
+    ./scripts/config --enable CONFIG_SLOB
+    ./scripts/config --enable CONFIG_CORE_SMALL
+    ./scripts/config --enable CONFIG_NET_SMALL
 
     # embed all filesystem modules
     grep "^CONFIG_[A-Z0-9]*_FS=m" .config  | cut -f1 -d"=" | while read cfg ; do
